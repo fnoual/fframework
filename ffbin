@@ -1,0 +1,129 @@
+#!/usr/bin/env php
+<?php
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+require __DIR__ . '/vendor/autoload.php';
+
+$command = $argv[1] ?? null;
+$args = array_slice($argv, 2); // Remove first two arguments (script name and command)
+
+switch ($command) {
+    case 'serve':
+        echo "Starting server...\n";
+        exec("php -S localhost:8000 -t public");
+        break;
+    case 'key':
+        generateKey();
+        break;
+    case 'view:create':
+        createView($args);
+        break;
+    case 'cache:clear':
+        clearCache('var/cache');
+        break;
+    case 'logs:clear':
+        clearCache('var/logs');
+        break;
+    default:
+        echo "Usage: ffbin [serve]\n";
+        break;
+}
+
+function generateKey()
+{
+    $key = 'base64:' . base64_encode(random_bytes(32));
+
+    if (file_exists('.env')) {
+        // Read .env file
+        $envContents = file_get_contents('.env');
+
+        // Check if APP_KEY is defined
+        if (preg_match('/^\s*APP_KEY=(.*)$/m', $envContents, $matches)) {
+            // Replace existing APP_KEY with new key
+            $newEnvContents = preg_replace('/^\s*APP_KEY=(.*)$/m', 'APP_KEY=' . $key, $envContents);
+        } else {
+            // Append new APP_KEY
+            $newEnvContents = $envContents . PHP_EOL . 'APP_KEY=' . $key;
+        }
+
+        // Write back to .env file
+        file_put_contents('.env', $newEnvContents);
+        echo "Key generated and written to .env file.\n";
+    } elseif (file_exists('.env.example')) {
+        // Copy .env.example and write key to it
+        copy('.env.example', '.env');
+        file_put_contents('.env', PHP_EOL . 'APP_KEY=' . $key, FILE_APPEND);
+        echo "Key generated and written to .env file.\n";
+    } else {
+        echo ".env.example not found. Please create it.\n";
+    }
+}
+
+function createView($args)
+{
+    if (count($args) < 2 || count($args) > 3) {
+        echo "Usage: ffbin view:create <viewName> [<parentView>]\n";
+        return;
+    }
+
+    $viewName = $args[0];
+    $parts = explode('.', $viewName);
+
+    if (count($parts) < 2) {
+        echo "Invalid view name. View name should be in the format of <directory>.<filename>\n";
+        return;
+    }
+
+    $directory = $parts[0];
+    $filename = $parts[1];
+
+    $templatePath = "templates/{$directory}/{$filename}.html.twig";
+
+    // Check if the file already exists
+    if (file_exists($templatePath)) {
+        echo "View already exists: {$templatePath}\n";
+        return;
+    }
+
+    // Create the directory if it doesn't exist
+    if (!is_dir("templates/{$directory}")) {
+        mkdir("templates/{$directory}", 0755, true);
+    }
+
+    // Create the view file
+    $parentView = $args[1];
+    $parentViewPath = str_replace('.', '/', $parentView) . '.html.twig';
+    file_put_contents($templatePath, "{% extends '{$parentViewPath}' %}\n{% block content %}\n\n{% endblock %}\n");
+
+    echo "View created: {$templatePath}\n";
+}
+
+function clearCache($directory): void
+{
+    $cacheDirectory = __DIR__ . "/{$directory}";
+    if (!is_dir($cacheDirectory)) {
+        echo "Cache directory not found: {$cacheDirectory}\n";
+        return;
+    }
+
+    // Recursive directory iterator
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($cacheDirectory, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
+
+    foreach ($iterator as $path) {
+        if ($path->isDir()) {
+            // Remove directory
+            rmdir($path->getPathname());
+        } else {
+            // Remove file
+            unlink($path->getPathname());
+        }
+    }
+
+    echo "Cache cleared: {$cacheDirectory}\n";
+}
+

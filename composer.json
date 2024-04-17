@@ -1,0 +1,28 @@
+{
+    "name": "fnoual/fframework",
+    "description": "A simple PHP micro-framework based on symfony MicroKernelTrait",
+    "type": "project",
+    "require": {
+        "symfony/config": "^7.0",
+        "symfony/http-kernel": "^7.0",
+        "symfony/http-foundation": "^7.0",
+        "symfony/routing": "^7.0",
+        "symfony/dependency-injection": "^7.0",
+        "symfony/framework-bundle": "^7.0",
+        "symfony/yaml": "^7.0",
+        "symfony/twig-bundle": "^7.0",
+        "symfony/web-profiler-bundle": "^7.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Fframework\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Fawzi Noual",
+            "email": "contact@fnoual.com"
+        }
+    ]
+}
